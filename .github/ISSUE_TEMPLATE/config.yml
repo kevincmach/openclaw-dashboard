@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 OpenClaw Discord
+    url: https://discord.com/invite/clawd
+    about: General questions, ideas, and community chat
+  - name: 📖 Documentation
+    url: https://github.com/profmatcha/openclaw-dashboard#readme
+    about: Check the README before opening an issue

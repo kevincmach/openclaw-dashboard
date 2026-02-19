@@ -1,8 +1,23 @@
 # 🐾 OpenClaw Dashboard
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![OpenClaw](https://img.shields.io/badge/built%20for-OpenClaw-8b5cf6)](https://openclaw.ai)
+
 A self-hosted web dashboard for monitoring and managing your [OpenClaw](https://github.com/openclaw/openclaw) AI agents. Track token usage, visualize activity, manage tasks via Kanban, and keep an eye on agent health — all from one place.
 
 <!-- Add screenshots here -->
+
+---
+
+## 🧠 Why I Built This
+
+I run several OpenClaw AI agents across different projects and had no good way to see what they were all doing. I wanted to know which agent was active, how many tokens it burned today, whether it was hitting rate limits, and what tasks were in its queue — all without digging through log files or jumping between terminals.
+
+So I built this: a single dashboard that reads directly from OpenClaw's on-disk session data, no extra infrastructure required. It started as a personal tool and evolved into something I thought the broader OpenClaw community might find useful.
+
+If you're running more than one agent and want visibility into what's happening, this is for you.
 
 ---
 
@@ -298,19 +313,28 @@ DASHBOARD_PORT=8080 python3 app.py
 
 ## 🤝 Contributing
 
-Pull requests welcome! Some ideas for contributions:
+Pull requests are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow — it covers forking, branch naming, commit conventions, and what makes a great PR.
 
-- Dark/light theme toggle
-- Export usage data to CSV
-- Agent comparison charts
-- Webhook support for task notifications
-- Multi-instance support (monitoring a fleet of OpenClaw nodes)
+**Ideas for first contributions** (tagged [`good first issue`](../../issues?q=is%3Aissue+label%3A%22good+first+issue%22) on GitHub):
+
+- 🌓 Dark/light theme toggle
+- 📤 Export usage data to CSV
+- 📊 Agent comparison charts
+- 🔔 Webhook support for task notifications
+- 🖥️ Multi-instance support (monitor a fleet of OpenClaw nodes)
+- 🌍 Timezone-aware timestamps throughout the UI
+
+Not sure where to start? Open a [GitHub Discussion](../../discussions) or ask in the [OpenClaw Discord](https://discord.com/invite/clawd).
 
 ---
 
 ## 📄 License
 
-MIT — do whatever you want with it. Attribution appreciated but not required.
+MIT — do whatever you want with it. Attribution appreciated but not required. See [LICENSE](LICENSE).
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a full history of releases and what changed in each.
 
 ---
 
