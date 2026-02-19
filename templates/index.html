@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clawrence Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0b;--surface:#141416;--surface2:#1c1c1f;--surface3:#242428;
+  --border:#2a2a2e;--text:#e4e4e7;--text2:#a1a1aa;--text3:#71717a;
+  --accent:#6366f1;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:var(--surface)}
+.header h1{font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.health-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.tabs{display:flex;gap:2px;padding:0 32px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{padding:12px 20px;cursor:pointer;color:var(--text3);font-size:14px;font-weight:500;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+
+.content{max-width:1400px;margin:0 auto;padding:24px 32px}
+.panel{display:none}.panel.active{display:block}
+
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.agent-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;transition:all .2s;position:relative;overflow:hidden}
+.agent-card:hover{border-color:var(--text3);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.agent-card .agent-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.agent-id{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.agent-dot{width:10px;height:10px;border-radius:50%}
+.status-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.status-active{background:rgba(16,185,129,.15);color:var(--green)}
+.status-idle{background:rgba(161,161,170,.1);color:var(--text3)}
+.agent-meta{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.meta-row{display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.meta-label{color:var(--text3)}
+.meta-value{color:var(--text2);font-family:'SF Mono',Monaco,monospace;font-size:12px}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.stat-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.chart-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px}
+.chart-container h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text2)}
+.chart-wrap{position:relative;height:280px}
+
+.model-table{width:100%;border-collapse:collapse;font-size:13px}
+.model-table th{text-align:left;padding:10px 16px;color:var(--text3);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.model-table td{padding:10px 16px;border-bottom:1px solid var(--border)}
+.model-table tr:hover td{background:var(--surface2)}
+.model-table .mono{font-family:'SF Mono',Monaco,monospace;font-size:12px}
+
+/* Kanban */
+.kanban-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;min-height:400px}
+.tag-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.tag-infra{background:rgba(99,102,241,.2);color:#a78bfa}
+.tag-code{background:rgba(16,185,129,.2);color:#34d399}
+.tag-research{background:rgba(245,158,11,.2);color:#fbbf24}
+.tag-ops{background:rgba(239,68,68,.2);color:#f87171}
+.tag-ui{background:rgba(20,184,166,.2);color:#5eead4}
+.tag-default{background:var(--surface3);color:var(--text3)}
+.source-icon{font-size:13px;cursor:default}
+.blocked-reason{font-size:11px;color:var(--yellow);font-style:italic;margin-top:4px}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;min-height:300px}
+.kanban-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.col-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.col-count{background:var(--surface3);color:var(--text3);font-size:11px;padding:2px 8px;border-radius:10px}
+.kanban-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;cursor:grab;transition:all .15s;border-left:4px solid}
+.kanban-card:hover{border-color:var(--text3);box-shadow:0 4px 12px rgba(0,0,0,.2);border-left-color:inherit}
+.kanban-card.dragging{opacity:.5;transform:rotate(2deg)}
+.kanban-card .card-title{font-size:14px;font-weight:500;margin-bottom:6px}
+.kanban-card .card-desc{font-size:12px;color:var(--text3);margin-bottom:10px}
+.kanban-card .card-footer{display:flex;justify-content:space-between;align-items:center}
+.kanban-card .card-due{font-size:11px;margin-top:6px}
+.card-due.overdue{color:var(--red);font-weight:600}
+.assignee-tag{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500}
+.card-delete{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:all .15s}
+.card-delete:hover{color:var(--red);background:rgba(239,68,68,.1)}
+.drop-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;color:var(--text3);font-size:12px;transition:all .2s}
+.drop-zone.over{border-color:var(--accent);background:rgba(99,102,241,.05)}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-bar select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-size:13px;outline:none}
+.filter-bar select:focus{border-color:var(--accent)}
+.filter-bar label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:90%;max-width:440px;box-shadow:0 24px 48px rgba(0,0,0,.4)}
+.modal h3{font-size:16px;margin-bottom:20px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border .2s}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.btn{padding:10px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#5558e6}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface2)}
+.btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+
+/* Rate limit monitor */
+.rate-monitor{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;position:relative;overflow:hidden}
+.rate-monitor::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#a78bfa)}
+.rate-monitor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.rate-monitor-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:10px}
+.rate-monitor-sub{font-size:12px;color:var(--text3)}
+.rate-bar-outer{background:var(--surface3);border-radius:8px;height:28px;overflow:hidden;margin-bottom:12px;position:relative}
+.rate-bar-inner{height:100%;border-radius:8px;transition:width 1s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font-size:12px;font-weight:600;color:#fff;min-width:40px}
+.rate-bar-low{background:linear-gradient(90deg,#10b981,#34d399)}
+.rate-bar-mid{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.rate-bar-high{background:linear-gradient(90deg,#ef4444,#f87171)}
+.rate-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.rate-detail{text-align:center}
+.rate-detail-value{font-size:18px;font-weight:700}
+.rate-detail-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.rate-note{background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:var(--radius-sm);padding:10px 14px;margin-top:16px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px}
+.rate-set-btn{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s}
+.rate-set-btn:hover{background:var(--surface2);border-color:var(--accent);color:var(--text)}
+
+.agent-usage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.agent-usage-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-left:3px solid}
+
+/* Health dashboard */
+.system-health-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.health-gauge{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.health-gauge-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.health-gauge-value{font-size:24px;font-weight:700;margin-bottom:8px}
+.health-gauge-bar{background:var(--surface3);border-radius:6px;height:8px;overflow:hidden}
+.health-gauge-fill{height:100%;border-radius:6px;transition:width .5s}
+.health-agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.health-agent-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.health-agent-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.health-status-dot{width:10px;height:10px;border-radius:50%}
+.health-status-dot.online{background:var(--green);box-shadow:0 0 8px rgba(16,185,129,.5)}
+.health-status-dot.idle{background:var(--yellow);box-shadow:0 0 8px rgba(245,158,11,.5)}
+.health-status-dot.inactive{background:var(--text3)}
+.health-agent-name{font-size:15px;font-weight:600}
+.health-agent-status{font-size:12px;text-transform:capitalize;color:var(--text3);margin-left:auto}
+.health-agent-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.health-stat{display:flex;flex-direction:column}
+.health-stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px}
+.health-stat-value{font-size:14px;font-weight:600;font-family:'SF Mono',Monaco,monospace}
+.error-badge{background:rgba(239,68,68,.15);color:var(--red);padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+
+/* Logs */
+.log-expand{display:none;background:var(--surface2);padding:12px 16px}
+.log-expand.open{display:table-row}
+.log-expand td{padding:12px 16px;font-size:12px;color:var(--text2)}
+.log-row{cursor:pointer}.log-row:hover td{background:var(--surface2)}
+.log-row.error td{background:rgba(239,68,68,.05)}
+.log-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* OpenRouter credit monitor teal accent */
+#or-credit-monitor::before{background:linear-gradient(90deg,#14b8a6,#5eead4)!important}
+.or-bar-inner{height:100%;border-radius:8px;transition:width 1s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font-size:12px;font-weight:600;color:#fff;min-width:40px;background:linear-gradient(90deg,#14b8a6,#5eead4)}
+
+@media(max-width:1200px){.kanban-board{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){
+  .content{padding:16px}
+  .kanban-board{grid-template-columns:1fr}
+  .header{padding:12px 16px}
+  .tabs{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐾 <span>OpenClaw</span> Dashboard</h1>
+  <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text3)">
+    <span class="health-dot"></span> System Online
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="agents">Agents</div>
+  <div class="tab" data-tab="usage">Usage</div>
+  <div class="tab" data-tab="health">Health</div>
+  <div class="tab" data-tab="logs">Logs</div>
+  <div class="tab" data-tab="kanban">Kanban</div>
+</div>
+
+<div class="content">
+<!-- AGENTS -->
+<div class="panel active" id="agents">
+  <div class="agents-grid" id="agents-grid"></div>
+</div>
+
+<!-- USAGE -->
+<div class="panel" id="usage">
+  <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px">
+    <div class="rate-monitor" id="rate-monitor" style="margin-bottom:0"></div>
+    <div class="rate-monitor" id="or-credit-monitor" style="margin-bottom:0"></div>
+  </div>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="agent-usage-grid" id="agent-usage-grid"></div>
+  <div class="chart-container">
+    <h3>24-Hour Activity Timeline</h3>
+    <div class="chart-wrap"><canvas id="timeline-chart"></canvas></div>
+  </div>
+  <div class="chart-container">
+    <h3>Model Breakdown</h3>
+    <div style="overflow-x:auto">
+      <table class="model-table" id="model-table">
+        <thead><tr><th>Model</th><th>Calls</th><th>Input Tokens</th><th>Output Tokens</th><th>Cost</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- HEALTH -->
+<div class="panel" id="health">
+  <div class="system-health-bar" id="system-health-bar"></div>
+  <h3 style="font-size:16px;font-weight:600;margin-bottom:16px">Agent Health</h3>
+  <div class="health-agents-grid" id="health-agents-grid"></div>
+</div>
+
+<!-- LOGS -->
+<div class="panel" id="logs">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2 style="font-size:18px;font-weight:600">Request Log</h2>
+    <span style="font-size:13px;color:var(--text3)" id="logs-count"></span>
+  </div>
+  <div class="filter-bar" id="logs-filter-bar">
+    <div class="filter-group">
+      <label>Agent</label>
+      <select id="log-filter-agent" onchange="loadLogs()"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label>Model</label>
+      <input id="log-filter-model" placeholder="Filter model..." style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-size:13px;outline:none;width:160px" oninput="loadLogs()">
+    </div>
+    <div class="filter-group">
+      <label>Status</label>
+      <select id="log-filter-status" onchange="filterLogsClient()">
+        <option value="">All</option>
+        <option value="success">Success</option>
+        <option value="error">Error</option>
+      </select>
+    </div>
+  </div>
+  <div style="overflow-x:auto;max-height:70vh;overflow-y:auto">
+    <table class="model-table" id="logs-table">
+      <thead><tr>
+        <th style="width:30px"></th>
+        <th>Time</th><th>Agent</th><th>Model</th><th>In Tokens</th><th>Out Tokens</th><th>Cost</th><th>Status</th><th>Prompt Preview</th>
+      </tr></thead>
+      <tbody id="logs-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- KANBAN -->
+<div class="panel" id="kanban">
+  <div class="kanban-header">
+    <h2 style="font-size:18px;font-weight:600">Task Board</h2>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="notifyAgent()" id="notify-btn">🔔 Notify Agent</button>
+      <button class="btn btn-primary" onclick="showAddTask()">+ New Task</button>
+    </div>
+  </div>
+  <div class="filter-bar" id="filter-bar">
+    <div class="filter-group">
+      <label>Agent</label>
+      <select id="filter-agent" onchange="loadKanban()">
+        <option value="">All</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Priority</label>
+      <select id="filter-priority" onchange="loadKanban()">
+        <option value="">All</option>
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Due Date</label>
+      <select id="filter-due" onchange="loadKanban()">
+        <option value="">All</option>
+        <option value="overdue">Overdue</option>
+        <option value="today">Due Today</option>
+        <option value="week">Due This Week</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Tag</label>
+      <select id="filter-tag" onchange="loadKanban()">
+        <option value="">All</option>
+        <option value="infra">Infra</option>
+        <option value="code">Code</option>
+        <option value="research">Research</option>
+        <option value="ops">Ops</option>
+        <option value="ui">UI</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Source</label>
+      <select id="filter-source" onchange="loadKanban()">
+        <option value="">All</option>
+        <option value="agent">🤖 Agent</option>
+        <option value="human">👤 Human</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Project</label>
+      <input id="filter-project" placeholder="Project..." style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-size:13px;outline:none;width:130px" oninput="loadKanban()">
+    </div>
+    <div class="filter-group">
+      <label>Requester</label>
+      <input id="filter-requester" placeholder="Requester..." style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-size:13px;outline:none;width:130px" oninput="loadKanban()">
+    </div>
+  </div>
+  <div class="kanban-board">
+    <div class="kanban-col" data-col="agent-inbox">
+      <div class="kanban-col-header"><span class="col-title">📥 Agent Inbox <span class="col-count" id="count-agent-inbox">0</span></span></div>
+      <div class="kanban-cards" id="cards-agent-inbox"></div>
+      <div class="drop-zone" data-col="agent-inbox">Drop here</div>
+    </div>
+    <div class="kanban-col" data-col="backlog">
+      <div class="kanban-col-header"><span class="col-title">📋 Backlog <span class="col-count" id="count-backlog">0</span></span></div>
+      <div class="kanban-cards" id="cards-backlog"></div>
+      <div class="drop-zone" data-col="backlog">Drop here</div>
+    </div>
+    <div class="kanban-col" data-col="in-progress">
+      <div class="kanban-col-header"><span class="col-title">🔄 In Progress <span class="col-count" id="count-in-progress">0</span></span></div>
+      <div class="kanban-cards" id="cards-in-progress"></div>
+      <div class="drop-zone" data-col="in-progress">Drop here</div>
+    </div>
+    <div class="kanban-col" data-col="blocked">
+      <div class="kanban-col-header"><span class="col-title">🚧 Blocked <span class="col-count" id="count-blocked">0</span></span></div>
+      <div class="kanban-cards" id="cards-blocked"></div>
+      <div class="drop-zone" data-col="blocked">Drop here</div>
+    </div>
+    <div class="kanban-col" data-col="done">
+      <div class="kanban-col-header"><span class="col-title">✅ Done <span class="col-count" id="count-done">0</span></span></div>
+      <div class="kanban-cards" id="cards-done"></div>
+      <div class="drop-zone" data-col="done">Drop here</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <h3>New Task</h3>
+    <div class="form-group"><label>Title</label><input id="task-title" placeholder="Task title..."></div>
+    <div class="form-group"><label>Description</label><textarea id="task-desc" placeholder="Optional description..."></textarea></div>
+    <div class="form-group"><label>Assignee</label><select id="task-assignee"><option value="">Unassigned</option></select></div>
+    <div class="form-group"><label>Priority</label>
+      <select id="task-priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Due Date</label><input type="date" id="task-due"></div>
+    <div class="form-group"><label>Tag</label>
+      <select id="task-tag">
+        <option value="">None</option>
+        <option value="infra">Infra</option>
+        <option value="code">Code</option>
+        <option value="research">Research</option>
+        <option value="ops">Ops</option>
+        <option value="ui">UI</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Project</label><input id="task-project" placeholder="e.g. openclaw-dashboard"></div>
+    <div class="form-group"><label>Requester</label><input id="task-requester" placeholder="Who requested this..."></div>
+    <div class="form-group"><label>Source</label>
+      <select id="task-source">
+        <option value="human">👤 Human</option>
+        <option value="agent">🤖 Agent</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Column</label>
+      <select id="task-col">
+        <option value="agent-inbox">Agent Inbox</option>
+        <option value="backlog" selected>Backlog</option>
+        <option value="in-progress">In Progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addTask()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = {main:'#6366f1',projects:'#10b981',games:'#f59e0b','clawrence-studios':'#ef4444'};
+const PRIORITY_COLORS = {low:'#71717a',medium:'#6366f1',high:'#f59e0b',urgent:'#ef4444'};
+const PRIORITY_ORDER = {urgent:0,high:1,medium:2,low:3};
+let timelineChart = null;
+let agents = [];
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'health') loadHealth();
+    if (t.dataset.tab === 'logs') loadLogs();
+  });
+});
+
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : n.toLocaleString();
+const fmtCost = n => '$' + n.toFixed(4);
+const fmtBytes = b => b >= 1e9 ? (b/1e9).toFixed(1)+' GB' : b >= 1e6 ? (b/1e6).toFixed(1)+' MB' : (b/1e3).toFixed(1)+' KB';
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60000) return Math.floor(diff/1000) + 's ago';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return Math.floor(diff/86400000) + 'd ago';
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const opts = {hour:'numeric',minute:'2-digit',hour12:true};
+  // If today, show "3:14 PM"
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-US', opts);
+  // If yesterday, show "Yesterday 3:14 PM"  
+  const yd = new Date(now); yd.setDate(yd.getDate()-1);
+  if (d.toDateString() === yd.toDateString()) return 'Yesterday ' + d.toLocaleTimeString('en-US', opts);
+  // Otherwise "Feb 17, 3:14 PM"
+  return d.toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ', ' + d.toLocaleTimeString('en-US', opts);
+}
+
+function fmtCostSmart(cost, provider) {
+  if (!cost && cost !== 0) return '—';
+  if (provider === 'anthropic') return '<span style="color:var(--accent)" title="Claude Pro subscription — no per-token billing">Pro Plan</span>';
+  return '$' + cost.toFixed(4);
+}
+
+function fmtDuration(sec) {
+  if (!sec) return '—';
+  const d = Math.floor(sec/86400), h = Math.floor((sec%86400)/3600), m = Math.floor((sec%3600)/60);
+  if (d > 0) return d + 'd ' + h + 'h';
+  if (h > 0) return h + 'h ' + m + 'm';
+  return m + 'm';
+}
+
+// Load agents
+async function loadAgents() {
+  const res = await fetch('/api/agents');
+  agents = await res.json();
+  const grid = document.getElementById('agents-grid');
+  const sel = document.getElementById('task-assignee');
+  const fsel = document.getElementById('filter-agent');
+  sel.innerHTML = '<option value="">Unassigned</option>';
+  // Keep filter selection
+  const curFilter = fsel.value;
+  fsel.innerHTML = '<option value="">All</option>';
+  grid.innerHTML = agents.map(a => {
+    const active = a.lastActive && (Date.now() - new Date(a.lastActive).getTime() < 3600000);
+    sel.innerHTML += `<option value="${a.id}">${a.id}</option>`;
+    fsel.innerHTML += `<option value="${a.id}">${a.id}</option>`;
+    return `
+    <div class="agent-card" style="border-top:3px solid ${a.color}">
+      <div class="agent-header">
+        <span class="agent-id"><span class="agent-dot" style="background:${a.color}"></span>${a.id}</span>
+        <span class="status-badge ${active?'status-active':'status-idle'}">${active?'Active':'Idle'}</span>
+      </div>
+      <div class="agent-meta">
+        <div class="meta-row"><span class="meta-label">Model</span><span class="meta-value">${a.model}</span></div>
+        <div class="meta-row"><span class="meta-label">Channel</span><span class="meta-value">${a.channel}/${a.accountId}</span></div>
+        <div class="meta-row"><span class="meta-label">Sessions</span><span class="meta-value"><span style="color:var(--green)">${a.activeSessionCount}</span> active / ${a.totalSessionCount} total</span></div>
+        <div class="meta-row"><span class="meta-label">Last Active</span><span class="meta-value">${a.lastActive ? fmtTime(a.lastActive) : '—'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  if (curFilter) fsel.value = curFilter;
+}
+
+// Load usage
+async function loadUsage() {
+  const res = await fetch('/api/usage');
+  const data = await res.json();
+  const t = data.totals;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Input Tokens</div><div class="stat-value">${fmt(t.input)}</div><div class="stat-sub">Cache read: ${fmt(t.cacheRead)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Output Tokens</div><div class="stat-value">${fmt(t.output)}</div><div class="stat-sub">Cache write: ${fmt(t.cacheWrite)}</div></div>
+    <div class="stat-card"><div class="stat-label">OpenRouter Cost</div><div class="stat-value" style="color:var(--green)">${fmtCost(t.openrouterCost || 0)}</div><div class="stat-sub">Pro Plan usage not billed per-token</div></div>
+    <div class="stat-card"><div class="stat-label">Models Used</div><div class="stat-value">${Object.keys(data.byModel).length}</div></div>
+  `;
+
+  const agentGrid = document.getElementById('agent-usage-grid');
+  agentGrid.innerHTML = Object.entries(data.byAgent).map(([id,u]) => `
+    <div class="agent-usage-card" style="border-left-color:${COLORS[id]||'#8b5cf6'}">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:${COLORS[id]||'#8b5cf6'}">${id}</div>
+      <div style="font-size:12px;color:var(--text3)">In: ${fmt(u.input)} · Out: ${fmt(u.output)} · ${fmtCost(u.cost)}</div>
+    </div>
+  `).join('');
+
+  const tbody = document.querySelector('#model-table tbody');
+  tbody.innerHTML = Object.entries(data.byModel)
+    .sort((a,b) => b[1].cost - a[1].cost)
+    .map(([m,v]) => {
+      const isAnth = m.startsWith('claude') || m.includes('opus') || m.includes('sonnet') || m.includes('haiku');
+      const costCell = isAnth && !m.includes('openrouter') ? '<span style="color:var(--accent)">Pro Plan</span>' : fmtCost(v.cost);
+      return `<tr><td class="mono">${m}</td><td>${v.calls}</td><td>${fmt(v.input)}</td><td>${fmt(v.output)}</td><td>${costCell}</td></tr>`;
+    })
+    .join('');
+
+  if (data.timeline.length) {
+    const buckets = {};
+    data.timeline.forEach(p => {
+      const h = p.timestamp.slice(0,13) + ':00';
+      if (!buckets[h]) buckets[h] = {input:0,output:0};
+      buckets[h].input += p.input;
+      buckets[h].output += p.output;
+    });
+    const labels = Object.keys(buckets).sort();
+    const inData = labels.map(l => buckets[l].input);
+    const outData = labels.map(l => buckets[l].output);
+    const shortLabels = labels.map(l => l.slice(11,16));
+
+    if (timelineChart) timelineChart.destroy();
+    timelineChart = new Chart(document.getElementById('timeline-chart'), {
+      type:'bar',
+      data:{labels:shortLabels,datasets:[
+        {label:'Input',data:inData,backgroundColor:'rgba(99,102,241,.6)',borderRadius:4},
+        {label:'Output',data:outData,backgroundColor:'rgba(16,185,129,.6)',borderRadius:4},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#a1a1aa',font:{size:12}}}},
+        scales:{
+          x:{grid:{color:'#2a2a2e'},ticks:{color:'#71717a',font:{size:11}}},
+          y:{grid:{color:'#2a2a2e'},ticks:{color:'#71717a',font:{size:11},callback:v=>fmt(v)}}
+        }
+      }
+    });
+  }
+}
+
+// Kanban
+async function loadKanban() {
+  let url = '/api/tasks';
+  const params = new URLSearchParams();
+  const fa = document.getElementById('filter-agent').value;
+  const fp = document.getElementById('filter-priority').value;
+  const fd = document.getElementById('filter-due').value;
+  const ftag = document.getElementById('filter-tag').value;
+  const fsrc = document.getElementById('filter-source').value;
+  const fproj = document.getElementById('filter-project').value;
+  const freq = document.getElementById('filter-requester').value;
+  if (fa) params.set('agent', fa);
+  if (fp) params.set('priority', fp);
+  if (fd) params.set('due', fd);
+  if (ftag) params.set('tag', ftag);
+  if (fsrc) params.set('source', fsrc);
+  if (fproj) params.set('project', fproj);
+  if (freq) params.set('requester', freq);
+  const qs = params.toString();
+  if (qs) url += '?' + qs;
+
+  const res = await fetch(url);
+  const tasks = await res.json();
+
+  // Sort: urgent first, then by due date
+  const sortTasks = arr => arr.sort((a,b) => {
+    const pa = PRIORITY_ORDER[a.priority||'medium'] ?? 2;
+    const pb = PRIORITY_ORDER[b.priority||'medium'] ?? 2;
+    if (pa !== pb) return pa - pb;
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if (a.dueDate) return -1;
+    if (b.dueDate) return 1;
+    return 0;
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+
+  const TAG_CLASSES = {infra:'tag-infra',code:'tag-code',research:'tag-research',ops:'tag-ops',ui:'tag-ui'};
+
+  ['agent-inbox','backlog','in-progress','blocked','done'].forEach(col => {
+    const container = document.getElementById('cards-'+col);
+    const colTasks = sortTasks(tasks.filter(t => t.column === col));
+    document.getElementById('count-'+col).textContent = colTasks.length;
+    container.innerHTML = colTasks.map(t => {
+      const pri = t.priority || 'medium';
+      const borderColor = PRIORITY_COLORS[pri] || PRIORITY_COLORS.medium;
+      const isOverdue = t.dueDate && t.dueDate < today;
+      const dueHtml = t.dueDate ? `<div class="card-due ${isOverdue?'overdue':''}">📅 ${t.dueDate}${isOverdue?' (overdue)':''}</div>` : '';
+      const tagHtml = t.tag ? `<span class="tag-badge ${TAG_CLASSES[t.tag]||'tag-default'}">${t.tag}</span>` : '';
+      const srcIcon = t.source === 'agent' ? '<span class="source-icon" title="Created by agent">🤖</span>' : t.source === 'human' ? '<span class="source-icon" title="Created by human">👤</span>' : '';
+      const blockedHtml = col === 'blocked' && t.blockedReason ? `<div class="blocked-reason">⚠️ ${esc(t.blockedReason)}</div>` : '';
+      const metaHtml = (t.project || t.requester) ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">${t.project?'📁 '+esc(t.project):''}${t.project&&t.requester?' · ':''}${t.requester?'👤 '+esc(t.requester):''}</div>` : '';
+      return `
+      <div class="kanban-card" draggable="true" data-id="${t.id}" style="border-left-color:${borderColor}" ondragstart="dragStart(event)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px">
+          <div class="card-title" style="margin:0">${esc(t.title)}</div>
+          <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">${srcIcon}${tagHtml}</div>
+        </div>
+        ${t.description ? `<div class="card-desc">${esc(t.description)}</div>` : ''}
+        ${blockedHtml}
+        ${metaHtml}
+        ${dueHtml}
+        <div class="card-footer">
+          <div style="display:flex;gap:6px;align-items:center">
+            ${t.assignee ? `<span class="assignee-tag" style="background:${COLORS[t.assignee]||'#333'};color:#fff">${t.assignee}</span>` : '<span></span>'}
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase">${pri}</span>
+          </div>
+          <button class="card-delete" onclick="deleteTask('${t.id}')" title="Delete">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function dragStart(e){e.dataTransfer.setData('text/plain',e.target.dataset.id);e.target.classList.add('dragging')}
+document.querySelectorAll('.drop-zone,.kanban-cards').forEach(z => {
+  z.addEventListener('dragover', e => {e.preventDefault();z.classList.add('over')});
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', async e => {
+    e.preventDefault();z.classList.remove('over');
+    const id = e.dataTransfer.getData('text/plain');
+    const col = z.dataset.col || z.closest('.kanban-col').dataset.col;
+    await fetch(`/api/tasks/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({column:col})});
+    loadKanban();
+  });
+});
+
+function showAddTask(){document.getElementById('task-modal').classList.add('show')}
+function closeModal(){document.getElementById('task-modal').classList.remove('show')}
+
+async function addTask(){
+  const title=document.getElementById('task-title').value.trim();
+  if(!title)return;
+  await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    title,
+    description:document.getElementById('task-desc').value,
+    assignee:document.getElementById('task-assignee').value,
+    column:document.getElementById('task-col').value,
+    priority:document.getElementById('task-priority').value,
+    dueDate:document.getElementById('task-due').value || null,
+    tag:document.getElementById('task-tag').value || null,
+    source:document.getElementById('task-source').value || 'human',
+    project:document.getElementById('task-project').value || null,
+    requester:document.getElementById('task-requester').value || null,
+  })});
+  ['task-title','task-desc','task-due','task-project','task-requester'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('task-priority').value='medium';
+  document.getElementById('task-tag').value='';
+  document.getElementById('task-source').value='human';
+  document.getElementById('task-col').value='backlog';
+  closeModal();loadKanban();
+}
+
+async function deleteTask(id){
+  await fetch(`/api/tasks/${id}`,{method:'DELETE'});
+  loadKanban();
+}
+
+async function notifyAgent() {
+  const btn = document.getElementById('notify-btn');
+  btn.textContent = '⏳ Notifying...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/notify-agent', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+    const data = await res.json();
+    btn.textContent = data.ok ? '✅ Agent Notified' : '❌ Failed';
+  } catch(e) {
+    btn.textContent = '❌ Error';
+  }
+  setTimeout(() => { btn.textContent = '🔔 Notify Agent'; btn.disabled = false; }, 3000);
+}
+
+// Health
+async function loadHealth() {
+  const res = await fetch('/api/health/detailed');
+  const data = await res.json();
+  const sys = data.system;
+
+  const diskPct = sys.diskTotal ? ((sys.diskUsed/sys.diskTotal)*100).toFixed(1) : 0;
+  const diskColor = diskPct > 90 ? 'var(--red)' : diskPct > 70 ? 'var(--yellow)' : 'var(--green)';
+
+  document.getElementById('system-health-bar').innerHTML = `
+    <div class="health-gauge">
+      <div class="health-gauge-label">Disk Usage</div>
+      <div class="health-gauge-value">${diskPct}%</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${fmtBytes(sys.diskUsed)} / ${fmtBytes(sys.diskTotal)}</div>
+      <div class="health-gauge-bar"><div class="health-gauge-fill" style="width:${diskPct}%;background:${diskColor}"></div></div>
+    </div>
+    <div class="health-gauge">
+      <div class="health-gauge-label">Process Memory (RSS)</div>
+      <div class="health-gauge-value">${fmtBytes(sys.pythonMemoryRss)}</div>
+      <div style="font-size:12px;color:var(--text3)">Dashboard server</div>
+    </div>
+    <div class="health-gauge">
+      <div class="health-gauge-label">Session Storage</div>
+      <div class="health-gauge-value">${fmtBytes(sys.sessionDirSize)}</div>
+      <div style="font-size:12px;color:var(--text3)">All agent session files</div>
+    </div>
+  `;
+
+  const grid = document.getElementById('health-agents-grid');
+  grid.innerHTML = Object.entries(data.agents).map(([id, h]) => `
+    <div class="health-agent-card">
+      <div class="health-agent-header">
+        <span class="health-status-dot ${h.status}"></span>
+        <span class="health-agent-name" style="color:${COLORS[id]||'#8b5cf6'}">${id}</span>
+        <span class="health-agent-status">${h.status}</span>
+      </div>
+      <div class="health-agent-stats">
+        <div class="health-stat"><span class="health-stat-label">Last Active</span><span class="health-stat-value">${fmtTime(h.lastActive)}</span></div>
+        <div class="health-stat"><span class="health-stat-label">Uptime</span><span class="health-stat-value">${fmtDuration(h.uptime)}</span></div>
+        <div class="health-stat"><span class="health-stat-label">Response Latency</span><span class="health-stat-value">${h.lastResponseMs != null ? (h.lastResponseMs/1000).toFixed(1)+'s' : '—'}</span></div>
+        <div class="health-stat"><span class="health-stat-label">Avg Output Tokens</span><span class="health-stat-value">${fmt(h.avgResponseTokens)}</span></div>
+        <div class="health-stat"><span class="health-stat-label">Total Tokens</span><span class="health-stat-value">${fmt(h.totalTokens)}</span></div>
+        <div class="health-stat"><span class="health-stat-label">Errors</span><span class="health-stat-value">${h.errorCount > 0 ? '<span class="error-badge">'+h.errorCount+'</span>' : '0'}</span></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Rate limits
+async function loadRateLimits() {
+  const res = await fetch('/api/rate-limits');
+  const data = await res.json();
+  const a = data.anthropic;
+  if (!a) return;
+
+  const pct = a.manual_pct != null ? a.manual_pct : null;
+  const resetMin = a.reset_minutes;
+  let resetStr = '—';
+  if (a.reset_at) {
+    const resetAt = new Date(a.reset_at);
+    const diff = resetAt - Date.now();
+    if (diff > 0) {
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      resetStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+    } else {
+      resetStr = 'Window rolled over';
+    }
+  }
+
+  const barPct = pct != null ? pct : 0;
+  const barClass = barPct >= 80 ? 'rate-bar-high' : barPct >= 50 ? 'rate-bar-mid' : 'rate-bar-low';
+  const staleMin = a.manual_pct_set_at ? Math.floor((Date.now() - new Date(a.manual_pct_set_at).getTime()) / 60000) : null;
+  const staleNote = staleMin != null && staleMin > 30 ? ` <span style="color:var(--yellow)">(set ${staleMin}m ago — may be stale)</span>` : '';
+
+  document.getElementById('rate-monitor').innerHTML = `
+    <div class="rate-monitor-header">
+      <div>
+        <div class="rate-monitor-title">⚡ Claude Pro Rate Limit <span style="font-size:12px;font-weight:400;color:var(--text3)">${a.subscription}</span></div>
+        <div class="rate-monitor-sub">Rolling ${Math.floor(resetMin/60)}h ${resetMin%60}m window · Resets when oldest request expires</div>
+      </div>
+      <button class="rate-set-btn" onclick="updateRatePct()">Update %</button>
+    </div>
+    <div class="rate-bar-outer">
+      <div class="rate-bar-inner ${barClass}" style="width:${Math.max(barPct,3)}%">${barPct.toFixed(0)}%</div>
+    </div>
+    <div class="rate-details">
+      <div class="rate-detail"><div class="rate-detail-value">${barPct.toFixed(0)}%</div><div class="rate-detail-label">Usage${staleNote}</div></div>
+      <div class="rate-detail"><div class="rate-detail-value">${a.usage.requests}</div><div class="rate-detail-label">Requests (window)</div></div>
+      <div class="rate-detail"><div class="rate-detail-value">${fmt(a.usage.input + a.usage.cache_read)}</div><div class="rate-detail-label">Input tokens (window)</div></div>
+      <div class="rate-detail"><div class="rate-detail-value">${fmt(a.usage.output)}</div><div class="rate-detail-label">Output tokens (window)</div></div>
+      <div class="rate-detail"><div class="rate-detail-value">${resetStr}</div><div class="rate-detail-label">Next reset</div></div>
+    </div>
+    <div class="rate-note">ℹ️ ${a.note}. Update the percentage manually from your Anthropic dashboard to keep it accurate.</div>
+  `;
+}
+
+async function updateRatePct() {
+  const pct = prompt('Enter current usage % from Anthropic dashboard (e.g. 28):');
+  if (pct === null) return;
+  const val = parseFloat(pct);
+  if (isNaN(val) || val < 0 || val > 100) { alert('Enter a number 0-100'); return; }
+
+  const resetStr = prompt('Minutes until next reset? (e.g. 206 for 3h26m, or leave blank to skip):');
+  const body = {percentage: val};
+  if (resetStr && resetStr.trim()) {
+    const mins = parseFloat(resetStr);
+    if (!isNaN(mins) && mins > 0) body.reset_minutes = mins;
+  }
+
+  await fetch('/api/rate-limits/anthropic', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  loadRateLimits();
+}
+
+// OpenRouter Credits
+async function loadORCredits() {
+  const el = document.getElementById('or-credit-monitor');
+  try {
+    const res = await fetch('/api/openrouter/credits');
+    const d = await res.json();
+    if (d.error) { el.innerHTML = `<div style="color:var(--red)">OpenRouter: ${d.error}</div>`; return; }
+    const pct = d.pct_used || 0;
+    const barClass = pct >= 80 ? 'rate-bar-high' : pct >= 50 ? 'rate-bar-mid' : '';
+    el.innerHTML = `
+      <div class="rate-monitor-header">
+        <div>
+          <div class="rate-monitor-title">💳 OpenRouter Credits <span style="font-size:12px;font-weight:400;color:var(--text3)">${d.is_free_tier ? 'Free Tier' : 'Paid'}</span></div>
+          <div class="rate-monitor-sub">Weekly spending limit · Auto-refreshes every 60s</div>
+        </div>
+        <button class="rate-set-btn" onclick="loadORCredits()">Refresh</button>
+      </div>
+      <div class="rate-bar-outer">
+        <div class="${barClass ? 'rate-bar-inner '+barClass : 'or-bar-inner'}" style="width:${Math.max(pct,3)}%">${pct.toFixed(1)}%</div>
+      </div>
+      <div class="rate-details">
+        <div class="rate-detail"><div class="rate-detail-value">$${d.limit?.toFixed(2)||'∞'}</div><div class="rate-detail-label">Weekly Limit</div></div>
+        <div class="rate-detail"><div class="rate-detail-value">$${d.limit_remaining?.toFixed(2)||'—'}</div><div class="rate-detail-label">Remaining</div></div>
+        <div class="rate-detail"><div class="rate-detail-value" style="color:var(--green)">$${d.usage_weekly?.toFixed(4)||'0'}</div><div class="rate-detail-label">Spent (Week)</div></div>
+        <div class="rate-detail"><div class="rate-detail-value">$${d.usage_monthly?.toFixed(4)||'0'}</div><div class="rate-detail-label">Spent (Month)</div></div>
+      </div>
+    `;
+  } catch(e) { el.innerHTML = `<div style="color:var(--text3)">OpenRouter credits unavailable</div>`; }
+}
+
+// Request Logs
+let _logsData = [];
+async function loadLogs() {
+  const agent = document.getElementById('log-filter-agent').value;
+  const model = document.getElementById('log-filter-model').value;
+  const params = new URLSearchParams();
+  if (agent) params.set('agent', agent);
+  if (model) params.set('model', model);
+  params.set('limit', '200');
+  const res = await fetch('/api/logs?' + params);
+  _logsData = await res.json();
+  filterLogsClient();
+}
+
+function filterLogsClient() {
+  const status = document.getElementById('log-filter-status').value;
+  let data = _logsData;
+  if (status === 'error') data = data.filter(d => d.stopReason === 'error' || d.errorMessage);
+  if (status === 'success') data = data.filter(d => d.stopReason !== 'error' && !d.errorMessage);
+
+  document.getElementById('logs-count').textContent = `${data.length} / ${_logsData.length} requests`;
+  const tbody = document.getElementById('logs-tbody');
+  tbody.innerHTML = data.map((d, i) => {
+    const isErr = d.stopReason === 'error' || d.errorMessage;
+    const color = COLORS[d.agent] || '#8b5cf6';
+    return `
+      <tr class="log-row ${isErr?'error':''}" onclick="toggleLogRow(${i})">
+        <td><span class="log-dot" style="background:${color}"></span></td>
+        <td style="white-space:nowrap;font-size:12px">${fmtTime(d.timestamp)}</td>
+        <td>${d.agent}</td>
+        <td class="mono" style="font-size:11px">${d.model}</td>
+        <td>${fmt(d.input_tokens)}</td>
+        <td>${fmt(d.output_tokens)}</td>
+        <td>${fmtCostSmart(d.cost, d.provider)}</td>
+        <td>${isErr ? '<span class="error-badge">Error</span>' : '<span style="color:var(--green)">✓</span>'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text3)">${esc(d.prompt_preview||'')}</td>
+      </tr>
+      <tr class="log-expand" id="log-detail-${i}"><td colspan="9">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:monospace;font-size:12px">
+          <div><b>Session:</b> ${d.session}</div>
+          <div><b>Provider:</b> ${d.provider}</div>
+          <div><b>Cache Read:</b> ${fmt(d.cache_read)}</div>
+          <div><b>Cache Write:</b> ${fmt(d.cache_write)}</div>
+          <div><b>Stop Reason:</b> ${d.stopReason}</div>
+          <div><b>Timestamp:</b> ${d.timestamp}</div>
+          ${d.errorMessage ? `<div style="grid-column:1/-1;color:var(--red)"><b>Error:</b> ${esc(String(d.errorMessage))}</div>` : ''}
+          <div style="grid-column:1/-1"><b>Prompt:</b> ${esc(d.prompt_preview||'—')}</div>
+        </div>
+      </td></tr>`;
+  }).join('');
+}
+
+function toggleLogRow(i) {
+  document.getElementById('log-detail-'+i)?.classList.toggle('open');
+}
+
+// Populate log agent filter when agents load
+function updateLogAgentFilter() {
+  const sel = document.getElementById('log-filter-agent');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All</option>' + agents.map(a => `<option value="${a.id}">${a.id}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+// Init
+loadAgents().then(() => { updateLogAgentFilter(); });
+loadUsage();loadKanban();loadRateLimits();loadORCredits();loadLogs();
+setInterval(loadUsage, 60000);
+setInterval(loadRateLimits, 60000);
+setInterval(loadORCredits, 60000);
+setInterval(loadLogs, 30000);
+</script>
+</body>
+</html>

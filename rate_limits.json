@@ -1,0 +1,9 @@
+{
+  "providers": {
+    "anthropic": {
+      "manual_pct": 0,
+      "set_at": "2026-02-18T06:45:00.000000+00:00",
+      "reset_at": null
+    }
+  }
+}
