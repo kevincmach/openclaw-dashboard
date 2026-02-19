@@ -1,0 +1,19 @@
+# Environment / secrets
+.env
+
+# Runtime data (machine-specific, not for version control)
+kanban.json
+rate_limits.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Editor
+.DS_Store
+*.swp
+*.swo

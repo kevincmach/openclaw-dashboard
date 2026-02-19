@@ -658,15 +658,28 @@ async function loadUsage() {
   if (data.timeline.length) {
     const buckets = {};
     data.timeline.forEach(p => {
-      const h = p.timestamp.slice(0,13) + ':00';
-      if (!buckets[h]) buckets[h] = {input:0,output:0};
-      buckets[h].input += p.input;
-      buckets[h].output += p.output;
+      // Convert UTC timestamp to local time for bucketing so the chart
+      // shows hours in the browser's local timezone instead of UTC.
+      const d = new Date(p.timestamp);
+      const localKey = d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0') + 'T' +
+        String(d.getHours()).padStart(2,'0') + ':00';
+      if (!buckets[localKey]) buckets[localKey] = {input:0,output:0};
+      buckets[localKey].input += p.input;
+      buckets[localKey].output += p.output;
     });
     const labels = Object.keys(buckets).sort();
     const inData = labels.map(l => buckets[l].input);
     const outData = labels.map(l => buckets[l].output);
-    const shortLabels = labels.map(l => l.slice(11,16));
+    const shortLabels = labels.map(l => {
+      // Format as 12-hour local time, e.g. "6 PM"
+      const [datePart, timePart] = l.split('T');
+      const h = parseInt(timePart.slice(0,2), 10);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return h12 + ' ' + ampm;
+    });
 
     if (timelineChart) timelineChart.destroy();
     timelineChart = new Chart(document.getElementById('timeline-chart'), {
