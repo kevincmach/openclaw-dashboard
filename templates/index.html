@@ -106,10 +106,30 @@ a{color:var(--accent);text-decoration:none}
 .form-group input,.form-group textarea,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border .2s}
 .form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent)}
 .form-group textarea{resize:vertical;min-height:80px}
+.form-group .readonly-val{font-size:13px;color:var(--text2);font-family:'SF Mono',Monaco,monospace;padding:4px 0}
 .btn{padding:10px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#5558e6}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}.btn-danger:hover{background:rgba(239,68,68,.25)}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface2)}
 .btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+/* Task Detail Modal */
+.detail-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0;width:95%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.5)}
+.detail-modal-header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0}
+.detail-modal-header-left{display:flex;flex-direction:column;gap:6px;flex:1}
+.detail-modal-id{font-size:11px;color:var(--text3);font-family:'SF Mono',Monaco,monospace}
+.detail-modal-title-input{font-size:18px;font-weight:600;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text);outline:none;width:100%;padding:4px 0;transition:border .2s}
+.detail-modal-title-input:focus{border-bottom-color:var(--accent)}
+.detail-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .15s;flex-shrink:0;line-height:1}
+.detail-close:hover{color:var(--text);background:var(--surface2)}
+.detail-modal-body{padding:20px 28px;overflow-y:auto;flex:1}
+.detail-modal-footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.detail-grid .span2{grid-column:1/-1}
+.detail-section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--accent);margin-bottom:12px;margin-top:4px}
+.detail-divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.resolution-section{background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius-sm);padding:16px;margin-top:4px}
+.resolution-section .detail-section-label{color:var(--green)}
+.kanban-card{cursor:pointer}
 
 /* Rate limit monitor */
 .rate-monitor{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;position:relative;overflow:hidden}
@@ -407,6 +427,112 @@ a{color:var(--accent);text-decoration:none}
   </div>
 </div>
 
+<!-- Task Detail / Edit Modal -->
+<div class="modal-overlay" id="task-detail-overlay" onclick="closeDetailModal(event)">
+  <div class="detail-modal" onclick="event.stopPropagation()">
+    <div class="detail-modal-header">
+      <div class="detail-modal-header-left">
+        <div class="detail-modal-id" id="detail-id-label"></div>
+        <input class="detail-modal-title-input" id="detail-title" placeholder="Task title..." />
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px" id="detail-badges"></div>
+      </div>
+      <button class="detail-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="detail-modal-body">
+      <!-- Description -->
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="detail-desc" rows="3" placeholder="Optional description..."></textarea>
+      </div>
+      <!-- Core fields grid -->
+      <div class="detail-grid">
+        <div class="form-group" style="margin:0">
+          <label>Status</label>
+          <select id="detail-col">
+            <option value="agent-inbox">📥 Agent Inbox</option>
+            <option value="backlog">📋 Backlog</option>
+            <option value="in-progress">🔄 In Progress</option>
+            <option value="blocked">🚧 Blocked</option>
+            <option value="done">✅ Done</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Priority</label>
+          <select id="detail-priority">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">🔴 Urgent</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Assignee</label>
+          <select id="detail-assignee"><option value="">Unassigned</option></select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Tag</label>
+          <select id="detail-tag">
+            <option value="">None</option>
+            <option value="infra">Infra</option>
+            <option value="code">Code</option>
+            <option value="research">Research</option>
+            <option value="ops">Ops</option>
+            <option value="ui">UI</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Due Date</label>
+          <input type="date" id="detail-due" />
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Source</label>
+          <select id="detail-source">
+            <option value="human">👤 Human</option>
+            <option value="agent">🤖 Agent</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Project</label>
+          <input id="detail-project" placeholder="e.g. openclaw-dashboard" />
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Requester</label>
+          <input id="detail-requester" placeholder="Who requested this..." />
+        </div>
+        <div class="form-group span2" id="detail-blocked-group" style="margin:0;display:none">
+          <label>Blocked Reason</label>
+          <input id="detail-blocked" placeholder="What's blocking this task?" />
+        </div>
+      </div>
+      <!-- Readonly meta -->
+      <div style="display:flex;gap:24px;margin-bottom:20px">
+        <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Created</div><div class="readonly-val" id="detail-created" style="font-size:12px;color:var(--text2);font-family:'SF Mono',Monaco,monospace"></div></div>
+        <div id="detail-resolved-group" style="display:none"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Resolved</div><div class="readonly-val" id="detail-resolved-at" style="font-size:12px;color:var(--green);font-family:'SF Mono',Monaco,monospace"></div></div>
+      </div>
+      <hr class="detail-divider" />
+      <!-- Resolution section -->
+      <div class="resolution-section">
+        <div class="detail-section-label">✅ Resolution & Notes</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Resolution</label>
+          <textarea id="detail-resolution" rows="2" placeholder="Brief summary of how this was resolved (1–2 bullets)..."></textarea>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Notes</label>
+          <textarea id="detail-notes" rows="2" placeholder="Root cause, context, links..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="detail-modal-footer">
+      <button class="btn btn-danger" id="detail-delete-btn" onclick="deleteTaskFromDetail()">🗑 Delete</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="closeDetailModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTaskDetail()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const COLORS = {main:'#6366f1',projects:'#10b981',games:'#f59e0b','clawrence-studios':'#ef4444'};
 const PRIORITY_COLORS = {low:'#71717a',medium:'#6366f1',high:'#f59e0b',urgent:'#ef4444'};
@@ -560,6 +686,120 @@ async function loadUsage() {
   }
 }
 
+// Task detail modal state
+let _tasksCache = {};
+let _detailTaskId = null;
+
+function openTaskDetail(taskId) {
+  const t = _tasksCache[taskId];
+  if (!t) return;
+  _detailTaskId = taskId;
+
+  document.getElementById('detail-id-label').textContent = '#' + t.id;
+  document.getElementById('detail-title').value = t.title || '';
+  document.getElementById('detail-desc').value = t.description || '';
+  document.getElementById('detail-col').value = t.column || 'backlog';
+  document.getElementById('detail-priority').value = t.priority || 'medium';
+  document.getElementById('detail-due').value = t.dueDate || '';
+  document.getElementById('detail-source').value = t.source || 'human';
+  document.getElementById('detail-project').value = t.project || '';
+  document.getElementById('detail-requester').value = t.requester || '';
+  document.getElementById('detail-blocked').value = t.blockedReason || '';
+  document.getElementById('detail-resolution').value = t.resolution || '';
+  document.getElementById('detail-notes').value = t.notes || '';
+  document.getElementById('detail-created').textContent = t.createdAt ? fmtTime(t.createdAt) : '—';
+
+  // Blocked reason row visibility
+  const blockedGroup = document.getElementById('detail-blocked-group');
+  blockedGroup.style.display = t.column === 'blocked' ? '' : 'none';
+  const colSel = document.getElementById('detail-col');
+  colSel.onchange = function() {
+    blockedGroup.style.display = this.value === 'blocked' ? '' : 'none';
+  };
+
+  // Resolved at
+  const resolvedGroup = document.getElementById('detail-resolved-group');
+  if (t.resolvedAt) {
+    resolvedGroup.style.display = '';
+    document.getElementById('detail-resolved-at').textContent = fmtTime(t.resolvedAt);
+  } else {
+    resolvedGroup.style.display = 'none';
+  }
+
+  // Badges
+  const TAG_CLASSES = {infra:'tag-infra',code:'tag-code',research:'tag-research',ops:'tag-ops',ui:'tag-ui'};
+  const PRIORITY_COLORS = {low:'#71717a',medium:'#6366f1',high:'#f59e0b',urgent:'#ef4444'};
+  const badges = document.getElementById('detail-badges');
+  badges.innerHTML = [
+    t.tag ? `<span class="tag-badge ${TAG_CLASSES[t.tag]||'tag-default'}">${t.tag}</span>` : '',
+    `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${PRIORITY_COLORS[t.priority||'medium']}22;color:${PRIORITY_COLORS[t.priority||'medium']};font-weight:600">${(t.priority||'medium').toUpperCase()}</span>`,
+    t.source === 'agent' ? '<span style="font-size:12px">🤖</span>' : '<span style="font-size:12px">👤</span>',
+  ].join('');
+
+  // Populate assignee select
+  const sel = document.getElementById('detail-assignee');
+  sel.innerHTML = '<option value="">Unassigned</option>' + agents.map(a => `<option value="${a.id}">${a.id}</option>`).join('');
+  sel.value = t.assignee || '';
+
+  document.getElementById('task-detail-overlay').classList.add('show');
+}
+
+function closeDetailModal(e) {
+  if (e && e.target !== document.getElementById('task-detail-overlay')) return;
+  document.getElementById('task-detail-overlay').classList.remove('show');
+  _detailTaskId = null;
+}
+
+async function saveTaskDetail() {
+  if (!_detailTaskId) return;
+  const col = document.getElementById('detail-col').value;
+  const oldTask = _tasksCache[_detailTaskId];
+  const wasNotDone = oldTask && oldTask.column !== 'done';
+  const nowDone = col === 'done';
+
+  const payload = {
+    title: document.getElementById('detail-title').value.trim(),
+    description: document.getElementById('detail-desc').value,
+    column: col,
+    priority: document.getElementById('detail-priority').value,
+    assignee: document.getElementById('detail-assignee').value,
+    tag: document.getElementById('detail-tag').value || null,
+    dueDate: document.getElementById('detail-due').value || null,
+    source: document.getElementById('detail-source').value,
+    project: document.getElementById('detail-project').value || null,
+    requester: document.getElementById('detail-requester').value || null,
+    blockedReason: document.getElementById('detail-blocked').value || null,
+    resolution: document.getElementById('detail-resolution').value || null,
+    notes: document.getElementById('detail-notes').value || null,
+  };
+
+  // Auto-stamp resolvedAt when first moved to done
+  if (nowDone && wasNotDone) {
+    payload.resolvedAt = new Date().toISOString();
+  }
+
+  const btn = document.querySelector('#task-detail-overlay .btn-primary');
+  btn.textContent = 'Saving...'; btn.disabled = true;
+  await fetch(`/api/tasks/${_detailTaskId}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  btn.textContent = 'Save Changes'; btn.disabled = false;
+  document.getElementById('task-detail-overlay').classList.remove('show');
+  _detailTaskId = null;
+  loadKanban();
+}
+
+async function deleteTaskFromDetail() {
+  if (!_detailTaskId) return;
+  if (!confirm('Delete this task? This cannot be undone.')) return;
+  await fetch(`/api/tasks/${_detailTaskId}`, {method: 'DELETE'});
+  document.getElementById('task-detail-overlay').classList.remove('show');
+  _detailTaskId = null;
+  loadKanban();
+}
+
 // Kanban
 async function loadKanban() {
   let url = '/api/tasks';
@@ -583,6 +823,10 @@ async function loadKanban() {
 
   const res = await fetch(url);
   const tasks = await res.json();
+
+  // Populate task cache for detail modal
+  _tasksCache = {};
+  tasks.forEach(t => { _tasksCache[t.id] = t; });
 
   // Sort: urgent first, then by due date
   const sortTasks = arr => arr.sort((a,b) => {
@@ -612,22 +856,24 @@ async function loadKanban() {
       const srcIcon = t.source === 'agent' ? '<span class="source-icon" title="Created by agent">🤖</span>' : t.source === 'human' ? '<span class="source-icon" title="Created by human">👤</span>' : '';
       const blockedHtml = col === 'blocked' && t.blockedReason ? `<div class="blocked-reason">⚠️ ${esc(t.blockedReason)}</div>` : '';
       const metaHtml = (t.project || t.requester) ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">${t.project?'📁 '+esc(t.project):''}${t.project&&t.requester?' · ':''}${t.requester?'👤 '+esc(t.requester):''}</div>` : '';
+      const hasResolution = t.resolution || t.notes;
       return `
-      <div class="kanban-card" draggable="true" data-id="${t.id}" style="border-left-color:${borderColor}" ondragstart="dragStart(event)">
+      <div class="kanban-card" draggable="true" data-id="${t.id}" style="border-left-color:${borderColor}" ondragstart="dragStart(event)" onclick="openTaskDetail('${t.id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px">
           <div class="card-title" style="margin:0">${esc(t.title)}</div>
           <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">${srcIcon}${tagHtml}</div>
         </div>
-        ${t.description ? `<div class="card-desc">${esc(t.description)}</div>` : ''}
+        ${t.description ? `<div class="card-desc">${esc(t.description.length > 80 ? t.description.slice(0,80)+'…' : t.description)}</div>` : ''}
         ${blockedHtml}
         ${metaHtml}
         ${dueHtml}
+        ${hasResolution ? `<div style="font-size:11px;color:var(--green);margin-top:5px;display:flex;align-items:center;gap:4px">✅ <span>Resolution logged</span></div>` : ''}
         <div class="card-footer">
           <div style="display:flex;gap:6px;align-items:center">
             ${t.assignee ? `<span class="assignee-tag" style="background:${COLORS[t.assignee]||'#333'};color:#fff">${t.assignee}</span>` : '<span></span>'}
             <span style="font-size:10px;color:var(--text3);text-transform:uppercase">${pri}</span>
           </div>
-          <button class="card-delete" onclick="deleteTask('${t.id}')" title="Delete">✕</button>
+          <button class="card-delete" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Delete">✕</button>
         </div>
       </div>`;
     }).join('');
@@ -905,6 +1151,18 @@ function updateLogAgentFilter() {
   sel.innerHTML = '<option value="">All</option>' + agents.map(a => `<option value="${a.id}">${a.id}</option>`).join('');
   if (cur) sel.value = cur;
 }
+
+// Escape key closes detail modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('task-detail-overlay').classList.contains('show')) {
+      document.getElementById('task-detail-overlay').classList.remove('show');
+      _detailTaskId = null;
+    } else if (document.getElementById('task-modal').classList.contains('show')) {
+      closeModal();
+    }
+  }
+});
 
 // Init
 loadAgents().then(() => { updateLogAgentFilter(); });
