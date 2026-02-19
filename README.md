@@ -21,6 +21,19 @@ If you're running more than one agent and want visibility into what's happening,
 
 ---
 
+## 📸 Screenshots
+
+**Usage Analytics** — token counts, rate limit monitor, 24-hour activity timeline, model breakdown
+![Usage tab showing Claude Pro rate limit at 70%, token totals, and 24-hour activity timeline](docs/screenshot-usage.png)
+
+**Agent Health** — per-agent status, uptime, response latency, error counts, system metrics
+![Health tab showing clawrence agent online with 16h uptime, disk and memory gauges](docs/screenshot-health.png)
+
+**Request Logs** — filterable table of every LLM request across all agents and sessions
+![Logs tab showing request log with agent, model, token counts, and Pro Plan cost](docs/screenshot-logs.png)
+
+---
+
 ## ✨ Features
 
 - **Agent Monitor** — See all your agents at a glance: status (active/idle), last activity, session counts, channel bindings
